@@ -1,0 +1,5 @@
+{
+  "name": "GeminiLeaf - AI LaTeX Editor",
+  "description": "A powerful, web-based LaTeX editor inspired by Overleaf. Features real-time preview, project management, and an intelligent AI assistant powered by Gemini 2.5 to generate, fix, and explain LaTeX code.",
+  "requestFramePermissions": []
+}
