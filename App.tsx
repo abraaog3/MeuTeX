@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import Editor from './components/Editor';
@@ -6,76 +7,15 @@ import AIPanel from './components/AIPanel';
 import Dashboard from './components/Dashboard';
 import { processLatexWithAI } from './services/geminiService';
 import { Project, FileNode, ViewMode, AIAction, LogEntry } from './types';
-import { Play, Columns, Eye, Code, Share2, Download, RotateCw, MessageCircle, Settings, ArrowLeft, FileText, Menu } from 'lucide-react';
-
-// --- Mock Initial Data ---
-const SAMPLE_LATEX = `\\documentclass[12pt, a4paper]{article}
-\\usepackage[utf8]{inputenc}
-\\usepackage{graphicx}
-\\usepackage{amsmath}
-
-\\title{Thesis Template}
-\\author{Student Name}
-\\date{\\today}
-
-\\begin{document}
-
-\\maketitle
-
-\\begin{abstract}
-This is a simple abstract for the thesis template simulating a real project structure.
-\\end{abstract}
-
-\\section{Introduction}
-This project demonstrates the new **Tree View** file structure in GeminiLeaf.
-You can organize your files into folders like 'Chapters' and 'Figures'.
-
-\\input{Chapters/intro}
-
-\\section{Math Example}
-Here is some math to test the preview:
-$$ \\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2} $$
-
-\\end{document}
-`;
-
-const INITIAL_PROJECT: Project = {
-  id: 'proj_1',
-  name: 'My First LaTeX Project',
-  owner: 'user@example.com',
-  lastModified: Date.now(),
-  root: {
-    id: 'root_1',
-    name: 'root',
-    type: 'folder',
-    isOpen: true,
-    children: [
-      { id: 'main.tex', name: 'main.tex', type: 'file', content: SAMPLE_LATEX },
-      { id: 'bib.bib', name: 'references.bib', type: 'file', content: '@article{key, ...}' },
-      { 
-        id: 'chapters', 
-        name: 'Chapters', 
-        type: 'folder', 
-        isOpen: true, 
-        children: [
-            { id: 'intro.tex', name: 'intro.tex', type: 'file', content: 'This text comes from an external file imported via \\texttt{\\textbackslash input}.' },
-        ] 
-      },
-      {
-        id: 'figures',
-        name: 'Figures',
-        type: 'folder',
-        isOpen: false,
-        children: []
-      }
-    ]
-  }
-};
+import { useProjects } from './hooks/useProjects';
+import { Play, Columns, Eye, Code, Share2, Download, RotateCw, MessageCircle, Settings, ArrowLeft, FileText, Menu, Cloud, AlertTriangle, Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
+  // Data Persistence Hook
+  const { projects, status, isLoading, addProject, updateProject, deleteProject } = useProjects();
+
   // Global State
   const [view, setView] = useState<'dashboard' | 'editor'>('dashboard');
-  const [projects, setProjects] = useState<Project[]>([INITIAL_PROJECT]);
   
   // Editor Session State
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
@@ -112,14 +52,6 @@ const App: React.FC = () => {
       return acc;
   };
 
-  // Recursively update a node
-  const updateProjectRoot = (projectId: string, updateFn: (root: FileNode) => FileNode) => {
-    setProjects(prev => prev.map(p => {
-        if (p.id !== projectId) return p;
-        return { ...p, root: updateFn({ ...p.root }), lastModified: Date.now() };
-    }));
-  };
-
   const updateNodeInTree = (nodes: FileNode[], nodeId: string, changes: Partial<FileNode>): FileNode[] => {
     return nodes.map(node => {
         if (node.id === nodeId) return { ...node, ...changes };
@@ -151,6 +83,8 @@ const App: React.FC = () => {
          name: 'New Blank Project',
          owner: 'user@example.com',
          lastModified: Date.now(),
+         createdAt: new Date().toISOString(),
+         updatedAt: new Date().toISOString(),
          root: {
              id: 'root_' + Date.now(),
              name: 'root',
@@ -160,7 +94,7 @@ const App: React.FC = () => {
              ]
          }
      };
-     setProjects([newProj, ...projects]);
+     addProject(newProj);
      handleOpenProject(newProj.id);
   };
 
@@ -231,6 +165,8 @@ const App: React.FC = () => {
             name: projName,
             owner: 'user@example.com',
             lastModified: Date.now(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             root: {
                 id: 'root_' + newProjId,
                 name: 'root',
@@ -238,30 +174,41 @@ const App: React.FC = () => {
                 children: finalChildren
             }
         };
-        setProjects([newProj, ...projects]);
+        addProject(newProj);
         setLogs([{ id: '1', type: 'info', message: 'Project imported successfully.', timestamp: Date.now() }]);
+        handleOpenProject(newProjId);
     }, 1000);
   };
 
   const handleDeleteProject = (id: string) => {
-      setProjects(projects.filter(p => p.id !== id));
+      deleteProject(id);
   };
 
   const handleFileChange = (newContent: string) => {
-      if (!activeProjectId) return;
-      updateProjectRoot(activeProjectId, (root) => {
-          return { ...root, children: updateNodeInTree(root.children || [], activeFileId, { content: newContent }) };
+      if (!activeProject) return;
+      
+      const updatedRoot = { 
+          ...activeProject.root, 
+          children: updateNodeInTree(activeProject.root.children || [], activeFileId, { content: newContent }) 
+      };
+      
+      updateProject({
+          ...activeProject,
+          root: updatedRoot,
+          lastModified: Date.now(),
+          updatedAt: new Date().toISOString()
       });
   };
 
   const handleToggleFolder = (nodeId: string) => {
-      if (!activeProjectId) return;
-      const project = projects.find(p => p.id === activeProjectId);
-      const node = findNode(project?.root.children || [], nodeId);
+      if (!activeProject) return;
+      const node = findNode(activeProject.root.children || [], nodeId);
       if (node) {
-          updateProjectRoot(activeProjectId, (root) => {
-              return { ...root, children: updateNodeInTree(root.children || [], nodeId, { isOpen: !node.isOpen }) };
-          });
+          const updatedRoot = { 
+            ...activeProject.root, 
+            children: updateNodeInTree(activeProject.root.children || [], nodeId, { isOpen: !node.isOpen }) 
+          };
+          updateProject({ ...activeProject, root: updatedRoot });
       }
   };
 
@@ -272,9 +219,11 @@ const App: React.FC = () => {
           let filename = importPath.split('/').pop() || importPath;
           if (!filename.endsWith('.tex')) filename += '.tex';
 
+          // Handle relative paths in a basic way if needed, for now flat map search
+          const fileNode = Object.values(fileMap).find(f => f.name === filename);
+
           if (processed.has(filename)) return `\n% Recursive loop detected: ${filename}\n`;
           
-          const fileNode = fileMap[filename];
           if (fileNode && fileNode.content) {
               const newProcessed = new Set(processed);
               newProcessed.add(filename);
@@ -289,11 +238,14 @@ const App: React.FC = () => {
     if (!activeProject) return;
     setIsCompiling(true);
 
+    // Flatten project to find files easily
     const fileMap = flattenProjectFiles(activeProject.root);
     const allFiles = Object.values(fileMap);
     
+    // Find Main File
     let mainFile = fileMap['main.tex'];
     if (!mainFile) {
+        // Fallback: try to find active file or any tex file
         const activeNode = findNode(activeProject.root.children || [], activeFileId);
         if (activeNode && activeNode.name.endsWith('.tex')) {
              mainFile = activeNode;
@@ -304,10 +256,9 @@ const App: React.FC = () => {
 
     setTimeout(() => {
         if (mainFile && mainFile.content) {
-            // 1. Resolve Imports
+            // 1. Resolve Imports (recursively)
             const resolvedContent = resolveLatexImports(mainFile.content, fileMap);
-            setCompiledContent(resolvedContent);
-
+            
             // 2. Extract Assets (Images)
             const assets: Record<string, string> = {};
             allFiles.forEach(f => {
@@ -315,9 +266,12 @@ const App: React.FC = () => {
                     assets[f.name] = f.content; 
                 }
             });
+            
+            // Update State for Preview
             setPreviewAssets(assets);
+            setCompiledContent(resolvedContent);
 
-            // 3. Mock Logs
+            // 3. Logs
             const newLogs: LogEntry[] = [];
             if (!resolvedContent.includes('\\documentclass')) {
                  newLogs.push({
@@ -331,7 +285,7 @@ const App: React.FC = () => {
                  newLogs.push({
                     id: Date.now().toString(),
                     type: 'info',
-                    message: `Output written on project.pdf (${(resolvedContent.length / 1024).toFixed(2)} KB).`,
+                    message: `Compilation finished. Output: project.pdf`,
                     timestamp: Date.now()
                 });
             }
@@ -344,7 +298,7 @@ const App: React.FC = () => {
   };
 
   const handleAIAction = async (action: AIAction, prompt?: string) => {
-    if (!activeProjectId) return;
+    if (!activeProject) return;
     const currentFile = activeProject?.root.children ? findNode(activeProject.root.children, activeFileId) : null;
     if (!currentFile || !currentFile.content) return;
 
@@ -375,7 +329,7 @@ const App: React.FC = () => {
           const element = document.getElementById('preview-document');
           if (element) {
               const opt = {
-                margin: 0,
+                margin: 10,
                 filename: `${activeProject?.name || 'document'}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true },
@@ -389,10 +343,25 @@ const App: React.FC = () => {
       }
   };
 
+  // Render Status Indicator
+  const renderStatus = () => {
+      if (status === 'saving') {
+          return <div className="flex items-center gap-1.5 text-slate-500 text-xs font-medium"><Loader2 size={12} className="animate-spin" /> Saving...</div>;
+      }
+      if (status === 'saved') {
+          return <div className="flex items-center gap-1.5 text-green-600 text-xs font-medium"><Cloud size={12} /> Saved</div>;
+      }
+      if (status === 'error') {
+          return <div className="flex items-center gap-1.5 text-red-500 text-xs font-medium"><AlertTriangle size={12} /> Save Error</div>;
+      }
+      return null;
+  };
+
   if (view === 'dashboard') {
       return (
           <Dashboard 
             projects={projects}
+            isLoading={isLoading}
             onOpenProject={handleOpenProject}
             onCreateProject={handleCreateProject}
             onImportProject={handleImportProject}
@@ -427,9 +396,8 @@ const App: React.FC = () => {
                         <Play size={14} fill="currentColor" /> Recompile
                     </button>
                     
-                    <div className="flex items-center bg-slate-100 border border-slate-200 rounded-lg p-1 text-slate-500 ml-2">
-                         <button className="p-1.5 hover:bg-white hover:text-slate-900 hover:shadow-sm rounded transition-all"><FileText size={16} /></button>
-                         <button className="p-1.5 hover:bg-white hover:text-slate-900 hover:shadow-sm rounded transition-all"><RotateCw size={16} /></button>
+                    <div className="ml-4 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-full">
+                         {renderStatus()}
                     </div>
                 </div>
            </div>

@@ -1,3 +1,4 @@
+
 export type NodeType = 'file' | 'folder';
 
 export interface FileNode {
@@ -14,8 +15,12 @@ export interface Project {
   name: string;
   root: FileNode; // Root folder
   lastModified: number;
+  createdAt: string;
+  updatedAt: string;
   owner: string;
 }
+
+export type SyncStatus = 'saved' | 'saving' | 'error' | 'synced' | 'loading';
 
 export enum ViewMode {
   EDITOR = 'EDITOR',

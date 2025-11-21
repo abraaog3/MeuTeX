@@ -1,9 +1,11 @@
+
 import React, { useRef, useState } from 'react';
 import { Project } from '../types';
-import { FileText, Upload, Plus, Search, Trash2, MoreHorizontal, FolderUp, Clock, User } from 'lucide-react';
+import { FileText, Upload, Plus, Search, Trash2, MoreHorizontal, FolderUp, Clock, User, Loader2 } from 'lucide-react';
 
 interface DashboardProps {
   projects: Project[];
+  isLoading: boolean;
   onOpenProject: (projectId: string) => void;
   onCreateProject: () => void;
   onImportProject: (files: FileList) => void;
@@ -12,6 +14,7 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({
   projects,
+  isLoading,
   onOpenProject,
   onCreateProject,
   onImportProject,
@@ -78,7 +81,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <h3 className="px-3 text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Library</h3>
             <a href="#" className="flex items-center gap-3 px-3 py-2.5 bg-blue-50 text-blue-700 rounded-lg font-medium text-sm">
                 <FileText size={18} /> All Projects
-                <span className="ml-auto bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">{projects.length}</span>
+                <span className="ml-auto bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">{isLoading ? '-' : projects.length}</span>
             </a>
             <a href="#" className="flex items-center gap-3 px-3 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors">
                 <User size={18} /> Shared with me
@@ -103,52 +106,59 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
-            {projects.map((project) => (
-              <div key={project.id} className="group bg-white rounded-xl p-5 border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex items-center gap-5 relative overflow-hidden">
-                <div 
-                  className="flex-1 cursor-pointer flex items-center gap-5" 
-                  onClick={() => onOpenProject(project.id)}
-                >
-                  <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors shrink-0">
-                    <FileText size={24} />
-                  </div>
-                  
-                  <div>
-                      <h3 className="font-semibold text-slate-800 text-lg mb-1 group-hover:text-blue-600 transition-colors">{project.name}</h3>
-                      <div className="text-xs text-slate-500 flex items-center gap-4">
-                        <span className="flex items-center gap-1"><User size={12} /> {project.owner}</span>
-                        <span className="flex items-center gap-1"><Clock size={12} /> {new Date(project.lastModified).toLocaleDateString()}</span>
-                      </div>
-                  </div>
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+                <Loader2 size={48} className="animate-spin mb-4 text-blue-500" />
+                <p className="font-medium">Loading your projects...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+                {projects.map((project) => (
+                <div key={project.id} className="group bg-white rounded-xl p-5 border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex items-center gap-5 relative overflow-hidden">
+                    <div 
+                    className="flex-1 cursor-pointer flex items-center gap-5" 
+                    onClick={() => onOpenProject(project.id)}
+                    >
+                    <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors shrink-0">
+                        <FileText size={24} />
+                    </div>
+                    
+                    <div>
+                        <h3 className="font-semibold text-slate-800 text-lg mb-1 group-hover:text-blue-600 transition-colors">{project.name}</h3>
+                        <div className="text-xs text-slate-500 flex items-center gap-4">
+                            <span className="flex items-center gap-1"><User size={12} /> {project.owner}</span>
+                            <span className="flex items-center gap-1"><Clock size={12} /> {new Date(project.updatedAt || project.lastModified).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 translate-x-4 group-hover:translate-x-0">
+                    <button 
+                        onClick={() => onDeleteProject(project.id)}
+                        className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete Project"
+                    >
+                        <Trash2 size={18} />
+                    </button>
+                    <button className="p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+                        <MoreHorizontal size={18} />
+                    </button>
+                    </div>
                 </div>
+                ))}
                 
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 translate-x-4 group-hover:translate-x-0">
-                  <button 
-                    onClick={() => onDeleteProject(project.id)}
-                    className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Delete Project"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                  <button className="p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
-                    <MoreHorizontal size={18} />
-                  </button>
+                {projects.length === 0 && (
+                <div className="p-16 text-center bg-white rounded-xl border border-dashed border-slate-300">
+                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                        <FolderUp size={32} />
+                    </div>
+                    <h3 className="text-slate-900 font-medium mb-1">No projects found</h3>
+                    <p className="text-slate-500 text-sm mb-6">Get started by creating a new project or importing one.</p>
+                    <button onClick={onCreateProject} className="text-blue-600 font-medium text-sm hover:underline">Create blank project</button>
                 </div>
-              </div>
-            ))}
-            
-            {projects.length === 0 && (
-              <div className="p-16 text-center bg-white rounded-xl border border-dashed border-slate-300">
-                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-                    <FolderUp size={32} />
-                </div>
-                <h3 className="text-slate-900 font-medium mb-1">No projects found</h3>
-                <p className="text-slate-500 text-sm mb-6">Get started by creating a new project or importing one.</p>
-                <button onClick={onCreateProject} className="text-blue-600 font-medium text-sm hover:underline">Create blank project</button>
-              </div>
-            )}
-          </div>
+                )}
+            </div>
+          )}
         </main>
       </div>
 

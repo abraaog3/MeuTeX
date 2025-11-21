@@ -20,6 +20,7 @@
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
               mono: ['JetBrains Mono', 'monospace'],
+              serif: ['Times New Roman', 'Times', 'serif'],
             }
           }
         }
@@ -31,19 +32,20 @@
     <!-- html2pdf for client-side PDF generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script type="importmap">
-    {
-      "imports": {
-        "react/": "https://aistudiocdn.com/react@^19.2.0/",
-        "react": "https://aistudiocdn.com/react@^19.2.0",
-        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
-        "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0",
-        "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
-        "rehype-katex": "https://aistudiocdn.com/rehype-katex@^7.0.1",
-        "remark-math": "https://aistudiocdn.com/remark-math@^6.0.0"
-      }
-    }
-    </script>
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "rehype-katex": "https://aistudiocdn.com/rehype-katex@^7.0.1",
+    "remark-math": "https://aistudiocdn.com/remark-math@^6.0.0",
+    "katex": "https://aistudiocdn.com/katex@^0.16.25"
+  }
+}
+</script>
     <style>
       /* Custom Scrollbar */
       ::-webkit-scrollbar {
@@ -65,6 +67,32 @@
       }
       .dark-scroll ::-webkit-scrollbar-thumb:hover {
         background: #64748b;
+      }
+      
+      /* Page Break Visualization for HTML Preview */
+      .page-break {
+        border-bottom: 1px dashed #cbd5e1;
+        margin: 40px 0;
+        position: relative;
+        width: 100%;
+      }
+      .page-break::after {
+        content: 'Page Break';
+        position: absolute;
+        right: 0;
+        top: -12px;
+        font-size: 10px;
+        color: #94a3b8;
+        background: #f1f5f9;
+        padding: 0 8px;
+      }
+      @media print {
+        .page-break { 
+          break-after: always;
+          border: none;
+          margin: 0;
+        }
+        .page-break::after { display: none; }
       }
     </style>
   </head>
